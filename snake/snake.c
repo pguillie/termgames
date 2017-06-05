@@ -1,10 +1,23 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   snake.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: pguillie <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2017/06/05 11:06:10 by pguillie          #+#    #+#             */
+/*   Updated: 2017/06/05 14:23:58 by pguillie         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "snake.h"
 
 static t_snbody	*newsnbody(t_snbody *next, int dir, t_coord2d wsz)
 {
 	t_snbody	*new;
+
 	if (!(new = (t_snbody*)ft_memalloc(sizeof(t_snbody))))
-		return (NULL);
+		exit(1);
 	new->p.x = ((next ? next->p.x : 0)
 			+ (dir == RI ? 1 : 0) - (dir == LE ? 1 : 0)) % wsz.x;
 	new->p.y = ((next ? next->p.y : 0)
@@ -32,7 +45,6 @@ static int		snake_win(char *prg, t_snake *s)
 
 static int		snake_init(char *prg, t_snake *s)
 {
-	t_termios	set;
 	char		*termtype;
 	int			success;
 
@@ -43,11 +55,18 @@ static int		snake_init(char *prg, t_snake *s)
 		return (ft_error(prg, "Could not access the termcap data base", NULL));
 	else if (success == 0)
 		return (ft_error(prg, termtype, "terminal type not defined"));
-	if (snake_win(prg, s))
+	s->cl = tgetstr("cl", (char**)&s->term_str);
+	s->cm = tgetstr("cm", (char**)&s->term_str);
+	s->te = tgetstr("te", (char**)&s->term_str);
+	s->ti = tgetstr("ti", (char**)&s->term_str);
+	s->ve = tgetstr("ve", (char**)&s->term_str);
+	s->vi = tgetstr("vi", (char**)&s->term_str);
+	if (!s->cl || !s->cm || !s->te || !s->ti || !s->ve || !s->vi
+			|| snake_win(prg, s))
 		return (1);
 	success = 0;
 	while (success < 4)
-		s->h = newsnbody(success++ ? s->h : NULL, (s->dir = RI), s->wsz);
+		s->h = newsnbody(success++ ? s->h : NULL, RI, s->wsz);
 	if (term_raw(&(s->backup), 1, 0))
 		return (1);
 	return (0);
@@ -59,14 +78,14 @@ static void		snake_loop(t_snake *s, long *key)
 		|| (*key == DO && s->dir != UP) || (*key == RI && s->dir != LE)
 		|| (*key == LE && s->dir != RI)) ? (s->dir = *key) : s->dir, s->wsz);
 	s->l = s->h;
-	ft_putstr(tgetstr("cl", NULL));
-	ft_putstr(tgoto(tgetstr("cm", NULL), (s->x.x %= s->wsz.x), (s->x.y %= s->wsz.y)));
+	ft_putstr(s->cl);
+	ft_putstr(tgoto(s->cm, (s->x.x %= s->wsz.x), (s->x.y %= s->wsz.y)));
 	ft_putchar('x');
 	while (s->l)
 	{
 		if (s->h != s->l && s->h->p.x == s->l->p.x && s->h->p.y == s->l->p.y)
 			*key = -1;
-		ft_putstr(tgoto(tgetstr("cm", NULL), s->l->p.x, s->l->p.y));
+		ft_putstr(tgoto(s->cm, s->l->p.x, s->l->p.y));
 		ft_putchar('o');
 		if (s->l->next && !s->l->next->next)
 		{
@@ -91,13 +110,14 @@ int				main(void)
 	srand(time(NULL));
 	s.x.x = rand() % s.wsz.x;
 	s.x.y = rand() % s.wsz.y;
-	ft_putstr(tgetstr("ti", NULL));
-	ft_putstr(tgetstr("vi", NULL));
+	ft_putstr(s.ti);
+	ft_putstr(s.vi);
+	s.dir = RI;
 	key = 0;
 	while (key >= 0 && !snake_win("snake", &s) && (key = key_input()) != 27)
 		snake_loop(&s, &key);
-	ft_putstr(tgetstr("te", NULL));
-	ft_putstr(tgetstr("ve", NULL));
+	ft_putstr(s.te);
+	ft_putstr(s.ve);
 	if (tcsetattr(0, TCSANOW, &(s.backup)) < 0)
 		return (ft_error("snake", "Unable to restore termios structure", NULL));
 	while (s.h)

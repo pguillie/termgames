@@ -13,7 +13,9 @@
 # define E_NOMEM "not enought space"
 # define E_NOOLDPWD "no previous directory"
 # define E_NORGHT "permission denied"
+# define E_NOTERM "terminal type not defined"
 # define E_NOTSET "varibale not set"
 # define E_SYNTAX "syntax error"
+# define E_TCBASE "could not access the termcap data base"
 
 #endif
